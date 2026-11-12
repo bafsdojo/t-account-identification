@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>T-Account Ledger Lab — Debit & Credit Identification Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #f3ecd9;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .font-mono-ledger {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Dynamic fluid typography for account titles */
+    .fluid-account-title {
+      font-size: clamp(1.125rem, 4vw, 1.5rem);
+      line-height: 1.25;
+    }
+
+    /* Dynamic text sizing for contra entries */
+    .fluid-contra-text {
+      font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+    }
+
+    /* Classic Textbook T-Account Styling */
+    .t-account-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .t-account-card:hover {
+      box-shadow: 0 8px 28px -4px rgba(15, 23, 42, 0.08);
+    }
+
+    .t-bar-horizontal {
+      height: 3px;
+      background-color: #1e293b;
+      border-radius: 2px;
+    }
+
+    .t-bar-vertical {
+      width: 3px;
+      background-color: #1e293b;
+      border-radius: 0 0 2px 2px;
+    }
+
+    /* Subtle Ledger Paper Ruled Lines */
+    .ledger-column {
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 35px,
+        #f1f5f9 35px,
+        #f1f5f9 36px
+      );
+      transition: background-color 0.3s ease;
+    }
+
+    /* Highlight states upon answer reveal */
+    .highlight-debit {
+      background-color: rgba(16, 185, 129, 0.13) !important;
+      background-image: none !important;
+    }
+
+    .highlight-credit {
+      background-color: rgba(59, 130, 246, 0.13) !important;
+      background-image: none !important;
+    }
+
+    /* Choice Buttons */
+    .choice-btn {
+      transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+      min-height: 52px;
+    }
+
+    .choice-btn:not(:disabled):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.1);
+      border-color: #3b82f6;
+    }
+
+    .choice-btn:not(:disabled):active {
+      transform: scale(0.98);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .animate-pop-in {
+      animation: popIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes pulseStreak {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+
+    .streak-bump {
+      animation: pulseStreak 0.35s ease;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-8">
+
+  <!-- Top Navigation & Control Bar -->
+  <header class="bg-white/95 backdrop-blur-xs border-b border-stone-200/80 sticky top-0 z-30 shadow-2xs">
+    <div class="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+      <!-- Brand & Title Row with BAFS Dojo Logo -->
+      <div class="flex items-center gap-3">
+        <a
+          href="https://www.instagram.com/bafsdojo?igsh=MXhnNW9zN3JjMXJoMg%3D%3D&utm_source=qr"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="group flex items-center gap-2.5 rounded-xl p-1 -ml-1 hover:bg-amber-900/5 transition"
+          title="Visit BAFS Dojo on Instagram"
+        >
+          <!-- Custom SVG Emblem matching BAFS DOJO -->
+          <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-stone-200 shadow-xs bg-[#f3ecd9] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <svg viewBox="0 0 120 120" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <rect width="120" height="120" fill="#f3ecd9"/>
+              <!-- Rising Sun Circle -->
+              <defs>
+                <linearGradient id="sunGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f59e0b"/>
+                  <stop offset="50%" stop-color="#ea580c"/>
+                  <stop offset="100%" stop-color="#991b1b"/>
+                </linearGradient>
+                <clipPath id="sunClip">
+                  <circle cx="60" cy="48" r="36"/>
+                </clipPath>
+              </defs>
+              <g clip-path="url(#sunClip)">
+                <circle cx="60" cy="48" r="36" fill="url(#sunGrad)"/>
+                <g stroke="#f3ecd9" stroke-width="1.5" opacity="0.85">
+                  <line x1="20" y1="22" x2="100" y2="22"/>
+                  <line x1="20" y1="28" x2="100" y2="28"/>
+                  <line x1="20" y1="34" x2="100" y2="34"/>
+                  <line x1="20" y1="40" x2="100" y2="40"/>
+                  <line x1="20" y1="46" x2="100" y2="46"/>
+                  <line x1="20" y1="52" x2="100" y2="52"/>
+                </g>
+              </g>
+              <circle cx="60" cy="48" r="36" fill="none" stroke="#18181b" stroke-width="2.5"/>
+              <!-- Pagoda Roof & Structure -->
+              <path d="M35 45 Q60 52 85 45 L78 52 L42 52 Z" fill="#18181b"/>
+              <rect x="44" y="52" width="32" height="6" fill="#f3ecd9" stroke="#18181b" stroke-width="1.5"/>
+              <path d="M26 58 Q60 66 94 58 L86 66 L34 66 Z" fill="#18181b"/>
+              <rect x="36" y="66" width="48" height="14" fill="#f3ecd9" stroke="#18181b" stroke-width="2"/>
+              <rect x="52" y="67" width="16" height="13" fill="#dc2626" stroke="#18181b" stroke-width="1.5"/>
+              <line x1="60" y1="67" x2="60" y2="80" stroke="#18181b" stroke-width="1.5"/>
+              <line x1="44" y1="66" x2="44" y2="80" stroke="#18181b" stroke-width="1.5"/>
+              <line x1="76" y1="66" x2="76" y2="80" stroke="#18181b" stroke-width="1.5"/>
+              <!-- Yin Yang Symbol -->
+              <circle cx="60" cy="34" r="14" fill="#18181b" stroke="#18181b" stroke-width="2"/>
+              <path d="M60 20 A14 14 0 0 0 60 48 A7 7 0 0 0 60 34 A7 7 0 0 1 60 20 Z" fill="#f3ecd9"/>
+              <circle cx="60" cy="27" r="2.2" fill="#18181b"/>
+              <circle cx="60" cy="41" r="2.2" fill="#f3ecd9"/>
+              <!-- BAFS DOJO Typography -->
+              <text x="60" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-weight="900" font-size="22" letter-spacing="1" fill="#18181b">BAFS</text>
+              <line x1="24" y1="109" x2="38" y2="109" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+              <text x="60" y="113" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="10.5" letter-spacing="2.5" fill="#18181b">DOJO</text>
+              <line x1="82" y1="109" x2="96" y2="109" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-extrabold text-slate-900 leading-tight tracking-tight group-hover:text-orange-700 transition-colors">
+              T-Account Ledger Lab
+            </h1>
+            <p class="text-xs text-slate-500 hidden sm:block">
+              BAFS Dojo &bull; 10-Question Double-Entry Quiz
+            </p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Tools: Active Player Badge, Audio & Dr/Cr Hints -->
+      <div class="flex items-center gap-2">
+        <!-- Active Player Badge (Shown during active game) -->
+        <div
+          id="activePlayerBadge"
+          class="hidden items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-xs font-bold text-amber-900 max-w-[140px] sm:max-w-[180px]"
+          title="Current Player"
+        >
+          <span class="shrink-0">👤</span>
+          <span id="activePlayerNameText" class="truncate">Player</span>
+        </div>
+
+        <!-- Sound Audio FX Toggle -->
+        <button
+          id="soundToggleBtn"
+          type="button"
+          onclick="toggleSound()"
+          class="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition cursor-pointer"
+          title="Toggle Sound Effects"
+        >
+          <span id="soundIcon">🔊</span>
+          <span id="soundLabel" class="hidden sm:inline">Audio On</span>
+        </button>
+
+        <!-- Beginner Scaffolding Toggle -->
+        <label class="inline-flex items-center gap-2 min-h-[40px] px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer select-none transition">
+          <input id="hintsToggle" type="checkbox" class="sr-only peer" onchange="toggleHints(this.checked)" />
+          <div class="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:after:translate-x-3.5"></div>
+          <span class="text-xs font-semibold text-slate-700">Dr / Cr Hints</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 flex flex-col gap-4 sm:gap-6">
+
+    <!-- Scoreboard Ribbon (Visible during active game & summary) -->
+    <section id="scoreboardSection" class="hidden grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3" aria-label="Scoreboard">
+      <div class="bg-white rounded-2xl border border-slate-200/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+        <div class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">Score</div>
+        <div class="mt-0.5 flex items-baseline gap-1">
+          <span id="statScore" class="text-lg sm:text-2xl font-extrabold text-slate-900 tabular-nums">0</span>
+          <span id="statTotal" class="text-xs font-medium text-slate-400 tabular-nums">/ 0</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+        <div class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">Accuracy</div>
+        <div class="mt-0.5 text-lg sm:text-2xl font-extrabold text-slate-900 tabular-nums" id="statAccuracy">—</div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+        <div class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">Current Streak</div>
+        <div class="mt-0.5 flex items-center gap-1">
+          <span id="statStreak" class="text-lg sm:text-2xl font-extrabold text-amber-600 tabular-nums">0</span>
+          <span id="streakFlame" class="text-sm sm:text-base opacity-30 transition-opacity">🔥</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+        <div class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">Time Left</div>
+        <div class="mt-0.5 flex items-center gap-1">
+          <span id="statTimer" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono-ledger tabular-nums">01:30</span>
+        </div>
+      </div>
+
+      <div class="col-span-2 sm:col-span-1 bg-white rounded-2xl border border-slate-200/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
+        <div class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400" id="progressLabel">Quiz Progress</div>
+        <div class="mt-0.5 text-xs sm:text-base font-bold text-indigo-600 tabular-nums truncate" id="progressValue">Question 1 of 10</div>
+        <!-- Quiz Progress Bar -->
+        <div id="quizProgressBarWrap" class="mt-1.5 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div id="quizProgressBar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 10%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Start Screen Card (Visible on initial load) -->
+    <section id="startScreen" class="animate-pop-in bg-white rounded-3xl border border-slate-200 p-5 sm:p-10 shadow-sm">
+      <div class="max-w-xl mx-auto text-center">
+        <div class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-100/80 text-amber-700 text-2xl sm:text-3xl mb-3 sm:mb-4 border border-amber-200/70">
+          📒
+        </div>
+        <h2 class="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          Welcome to T-Account Ledger Lab
+        </h2>
+        <p class="text-slate-500 mt-1.5 text-xs sm:text-base">
+          Identify the correct double-entry journal posting across <strong class="text-slate-700">10 questions</strong> within <strong class="text-slate-700">01:30</strong>. Highest score and quickest time rank at the top!
+        </p>
+
+        <!-- Player Name Input Form -->
+        <form id="startForm" onsubmit="handleStartSubmit(event)" class="mt-6 sm:mt-8 max-w-md mx-auto">
+          <label for="playerNameInput" class="block text-left text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+            Player / Student Name
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input
+              id="playerNameInput"
+              type="text"
+              maxlength="24"
+              placeholder="Enter your name"
+              autocomplete="off"
+              class="flex-1 min-h-[48px] px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-slate-50/60 focus:bg-white focus:border-indigo-600 focus:outline-none text-sm sm:text-base font-semibold text-slate-900 placeholder:text-slate-400 transition"
+            />
+            <button
+              type="submit"
+              class="min-h-[48px] px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer shrink-0 inline-flex items-center justify-center gap-2"
+            >
+              <span>Start 10-Question Quiz</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 text-left mt-1.5">
+            Leave blank to play as <span class="font-semibold text-slate-500">Player</span>. Press <kbd class="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> to start.
+          </p>
+        </form>
+
+        <!-- Top Leaderboard Preview on Start Screen -->
+        <div class="mt-8 pt-6 border-t border-slate-100 text-left">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>🏆</span>
+              <span>Top Leaderboard (Most Correct &amp; Quickest Time)</span>
+            </h3>
+            <span id="startLeaderboardCount" class="text-[11px] font-semibold text-slate-400 tabular-nums"></span>
+          </div>
+          <div id="startLeaderboardList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Question Card -->
+    <section id="gameArena" class="hidden flex flex-col gap-4 sm:gap-6">
+
+      <!-- Instruction Banner -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900 text-white rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 shadow-sm">
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/30 text-indigo-300 text-xs font-bold shrink-0">?</span>
+          <p class="text-xs sm:text-base font-medium leading-normal">
+            Inspect the <span class="font-bold text-white">Left</span> and <span class="font-bold text-white">Right</span> sides of each T-account. Which journal entry is posted?
+          </p>
+        </div>
+        <div class="text-xs text-slate-400 shrink-0 hidden md:block">
+          Tip: Press <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200 font-mono">1</kbd> or <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200 font-mono">2</kbd> to answer
+        </div>
+      </div>
+
+      <!-- Two T-Accounts: Stacked on Mobile, Side-by-Side on Desktop -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-7" id="tAccountsGrid">
+        <!-- Left T-Account Card -->
+        <article class="t-account-card rounded-2xl p-4 sm:p-6 flex flex-col" aria-label="Left T-Account">
+          <div class="flex items-center justify-end min-h-[20px] mb-1">
+            <span id="leftCardBadge" class="hidden text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+          </div>
+
+          <!-- Account Title -->
+          <h2 id="leftAccountName" class="fluid-account-title text-center font-extrabold text-slate-900 tracking-tight py-1.5 sm:py-2">
+            Cash
+          </h2>
+
+          <!-- Optional Dr / Cr Scaffolding Subheader -->
+          <div class="dr-cr-hint hidden grid grid-cols-2 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider pb-1.5 text-slate-500">
+            <span class="text-emerald-700">Debit (Dr.)</span>
+            <span class="text-blue-700">Credit (Cr.)</span>
+          </div>
+
+          <!-- Horizontal T-Bar -->
+          <div class="t-bar-horizontal w-full"></div>
+
+          <!-- T-Account Body (Left Column | Vertical Bar | Right Column) -->
+          <div class="grid grid-cols-[1fr_3px_1fr] min-h-[125px] sm:min-h-[168px]">
+            <!-- Left (Debit) Side -->
+            <div id="leftCardDebitCol" class="ledger-column p-2 sm:p-4 flex flex-col justify-start overflow-hidden">
+              <div id="leftCardDebitEntry" class="hidden flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-2 py-1">
+                <div class="flex flex-col">
+                  <span class="text-[10px] sm:text-xs font-medium text-slate-400 tabular-nums" data-role="date">Nov 12</span>
+                  <span class="fluid-contra-text font-bold text-slate-800 leading-tight" data-role="contra">Capital</span>
+                </div>
+                <span class="font-mono-ledger text-xs sm:text-base font-bold text-slate-900 shrink-0" data-role="amount">$1,200</span>
+              </div>
+            </div>
+
+            <!-- Vertical T-Bar -->
+            <div class="t-bar-vertical h-full"></div>
+
+            <!-- Right (Credit) Side -->
+            <div id="leftCardCreditCol" class="ledger-column p-2 sm:p-4 flex flex-col justify-start overflow-hidden">
+              <div id="leftCardCreditEntry" class="hidden flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-2 py-1">
+                <div class="flex flex-col">
+                  <span class="text-[10px] sm:text-xs font-medium text-slate-400 tabular-nums" data-role="date">Nov 12</span>
+                  <span class="fluid-contra-text font-bold text-slate-800 leading-tight" data-role="contra">Capital</span>
+                </div>
+                <span class="font-mono-ledger text-xs sm:text-base font-bold text-slate-900 shrink-0" data-role="amount">$1,200</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Right T-Account Card -->
+        <article class="t-account-card rounded-2xl p-4 sm:p-6 flex flex-col" aria-label="Right T-Account">
+          <div class="flex items-center justify-end min-h-[20px] mb-1">
+            <span id="rightCardBadge" class="hidden text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+          </div>
+
+          <!-- Account Title -->
+          <h2 id="rightAccountName" class="fluid-account-title text-center font-extrabold text-slate-900 tracking-tight py-1.5 sm:py-2">
+            Sales
+          </h2>
+
+          <!-- Optional Dr / Cr Scaffolding Subheader -->
+          <div class="dr-cr-hint hidden grid grid-cols-2 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider pb-1.5 text-slate-500">
+            <span class="text-emerald-700">Debit (Dr.)</span>
+            <span class="text-blue-700">Credit (Cr.)</span>
+          </div>
+
+          <!-- Horizontal T-Bar -->
+          <div class="t-bar-horizontal w-full"></div>
+
+          <!-- T-Account Body (Left Column | Vertical Bar | Right Column) -->
+          <div class="grid grid-cols-[1fr_3px_1fr] min-h-[125px] sm:min-h-[168px]">
+            <!-- Left (Debit) Side -->
+            <div id="rightCardDebitCol" class="ledger-column p-2 sm:p-4 flex flex-col justify-start overflow-hidden">
+              <div id="rightCardDebitEntry" class="hidden flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-2 py-1">
+                <div class="flex flex-col">
+                  <span class="text-[10px] sm:text-xs font-medium text-slate-400 tabular-nums" data-role="date">Nov 12</span>
+                  <span class="fluid-contra-text font-bold text-slate-800 leading-tight" data-role="contra">Cash</span>
+                </div>
+                <span class="font-mono-ledger text-xs sm:text-base font-bold text-slate-900 shrink-0" data-role="amount">$1,200</span>
+              </div>
+            </div>
+
+            <!-- Vertical T-Bar -->
+            <div class="t-bar-vertical h-full"></div>
+
+            <!-- Right (Credit) Side -->
+            <div id="rightCardCreditCol" class="ledger-column p-2 sm:p-4 flex flex-col justify-start overflow-hidden">
+              <div id="rightCardCreditEntry" class="hidden flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-2 py-1">
+                <div class="flex flex-col">
+                  <span class="text-[10px] sm:text-xs font-medium text-slate-400 tabular-nums" data-role="date">Nov 12</span>
+                  <span class="fluid-contra-text font-bold text-slate-800 leading-tight" data-role="contra">Cash</span>
+                </div>
+                <span class="font-mono-ledger text-xs sm:text-base font-bold text-slate-900 shrink-0" data-role="amount">$1,200</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Multiple Choice Options (Inline on all devices) -->
+      <div id="optionsWrapper" class="w-full">
+        <div class="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4" id="optionsContainer">
+          <button
+            id="optionBtn0"
+            type="button"
+            onclick="submitAnswer(0)"
+            class="choice-btn group relative bg-white border-2 border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left flex items-center justify-between gap-3 cursor-pointer focus:outline-none focus:ring-4 focus:ring-indigo-500/20 active:bg-slate-50"
+          >
+            <div class="flex items-center gap-3">
+              <span id="optionKey0" class="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-600 font-mono text-xs font-bold group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                1
+              </span>
+              <div class="font-mono-ledger text-xs sm:text-base leading-snug">
+                <div class="font-bold text-slate-900" id="option0Line1">Dr. Cash</div>
+                <div class="font-semibold text-slate-600 pl-4 sm:pl-6" id="option0Line2">Cr. Sales</div>
+              </div>
+            </div>
+            <span id="optionIcon0" class="text-lg sm:text-xl font-bold shrink-0"></span>
+          </button>
+
+          <button
+            id="optionBtn1"
+            type="button"
+            onclick="submitAnswer(1)"
+            class="choice-btn group relative bg-white border-2 border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left flex items-center justify-between gap-3 cursor-pointer focus:outline-none focus:ring-4 focus:ring-indigo-500/20 active:bg-slate-50"
+          >
+            <div class="flex items-center gap-3">
+              <span id="optionKey1" class="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-600 font-mono text-xs font-bold group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                2
+              </span>
+              <div class="font-mono-ledger text-xs sm:text-base leading-snug">
+                <div class="font-bold text-slate-900" id="option1Line1">Dr. Sales</div>
+                <div class="font-semibold text-slate-600 pl-4 sm:pl-6" id="option1Line2">Cr. Cash</div>
+              </div>
+            </div>
+            <span id="optionIcon1" class="text-lg sm:text-xl font-bold shrink-0"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Instant Feedback & Explanation Drawer -->
+      <div id="feedbackBanner" class="hidden animate-pop-in rounded-2xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 mb-2 md:mb-0">
+        <div class="flex items-center gap-3">
+          <div id="feedbackBadgeIcon" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-base sm:text-lg"></div>
+          <div>
+            <h3 id="feedbackTitle" class="text-sm sm:text-base font-extrabold"></h3>
+          </div>
+        </div>
+        <button
+          id="nextQuestionBtn"
+          type="button"
+          onclick="nextRound()"
+          class="shrink-0 inline-flex items-center justify-center gap-2 min-h-[48px] px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer w-full sm:w-auto"
+        >
+          <span id="nextBtnLabel">Next Question</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Quiz Summary & Ranking Screen (Hidden until quiz finishes) -->
+    <section id="quizSummaryScreen" class="hidden animate-pop-in bg-white rounded-3xl border border-slate-200 p-5 sm:p-10 shadow-sm">
+      <div class="max-w-2xl mx-auto text-center">
+        <div id="summaryIcon" class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-50 text-indigo-600 text-2xl sm:text-3xl mb-3 sm:mb-4">
+          🏆
+        </div>
+        <h2 id="summaryTitle" class="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Quiz Complete!</h2>
+        <p id="summarySubtitle" class="text-slate-500 mt-1 text-xs sm:text-base">Here is how well you identified Debit (left) and Credit (right) T-account entries.</p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 my-5 sm:my-6">
+          <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200/80">
+            <div class="text-[10px] sm:text-xs font-semibold uppercase text-slate-400">Final Score</div>
+            <div id="summaryScore" class="text-lg sm:text-2xl font-extrabold text-slate-900 mt-1 tabular-nums">8 / 10</div>
+          </div>
+          <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200/80">
+            <div class="text-[10px] sm:text-xs font-semibold uppercase text-slate-400">Accuracy</div>
+            <div id="summaryAccuracy" class="text-lg sm:text-2xl font-extrabold text-emerald-600 mt-1 tabular-nums">80%</div>
+          </div>
+          <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200/80">
+            <div class="text-[10px] sm:text-xs font-semibold uppercase text-slate-400">Time Used</div>
+            <div id="summaryTimeUsed" class="text-lg sm:text-2xl font-extrabold text-indigo-600 font-mono-ledger mt-1 tabular-nums">00:45</div>
+          </div>
+          <div class="bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200/80">
+            <div class="text-[10px] sm:text-xs font-semibold uppercase text-slate-400">Best Streak</div>
+            <div id="summaryBestStreak" class="text-lg sm:text-2xl font-extrabold text-amber-600 mt-1 tabular-nums">5</div>
+          </div>
+        </div>
+
+        <!-- Leaderboard / Ranking Table (Replaces Round-by-Round Review) -->
+        <div class="text-left mt-5 sm:mt-6">
+          <div class="flex items-center justify-between gap-2 mb-2.5">
+            <h3 class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>🏅</span>
+              <span>Ranking — Most Correct &amp; Quickest Time</span>
+            </h3>
+            <button
+              id="clearRankingBtn"
+              type="button"
+              onclick="handleClearRankingClick()"
+              class="text-[11px] font-semibold text-slate-400 hover:text-rose-600 px-2.5 py-1 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+            >
+              Clear Ranking
+            </button>
+          </div>
+          <div id="leaderboardList" class="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+
+        <div class="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            type="button"
+            onclick="restartQuiz()"
+            class="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm transition active:scale-95 cursor-pointer"
+          >
+            Play Again (<span id="playAgainPlayerName">Player</span>)
+          </button>
+          <button
+            type="button"
+            onclick="returnToStartScreen()"
+            class="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer"
+          >
+            Change Player / New Game
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-3 sm:py-4 text-center text-[10px] sm:text-xs text-slate-500">
+    Remember: <strong class="text-slate-700">Debit (Dr.)</strong> = Left side &bull; <strong class="text-slate-700">Credit (Cr.)</strong> = Right side
+  </footer>
+
+  <script>
+    /**
+     * Complete double-entry list extracted from Double Entry Summary_v2.docx
+     */
+    const DEFAULT_PAIRS = [
+      { dr: "Cash", cr: "Capital" },
+      { dr: "Bank", cr: "Capital" },
+      { dr: "Bank", cr: "Bank Loan" },
+      { dr: "Bank Loan", cr: "Bank" },
+      { dr: "Bank", cr: "Cash" },
+      { dr: "Cash", cr: "Bank" },
+      { dr: "Office Equipment", cr: "Cash" },
+      { dr: "Motor Vehicles", cr: "Other Payables" },
+      { dr: "Other Payables", cr: "Motor Vehicles" },
+      { dr: "Cash", cr: "Buildings" },
+      { dr: "Other Receivables", cr: "Buildings" },
+      { dr: "Other Payables", cr: "Bank" },
+      { dr: "Furniture", cr: "Capital" },
+      { dr: "Bank Loan", cr: "Capital" },
+      { dr: "Other Payables", cr: "Capital" },
+      { dr: "Trade Payables", cr: "Capital" },
+      { dr: "Drawings", cr: "Cash" },
+      { dr: "Purchases", cr: "Cash" },
+      { dr: "Purchases", cr: "Trade Payables" },
+      { dr: "Bank", cr: "Returns Outwards" },
+      { dr: "Trade Payables", cr: "Returns Outwards" },
+      { dr: "Trade Payables", cr: "Cash" },
+      { dr: "Trade Payables", cr: "Bank" },
+      { dr: "Trade Payables", cr: "Discounts Received" },
+      { dr: "Cash", cr: "Sales" },
+      { dr: "Trade Receivables", cr: "Sales" },
+      { dr: "Returns Inwards", cr: "Cash" },
+      { dr: "Returns Inwards", cr: "Trade Receivables" },
+      { dr: "Cash", cr: "Trade Receivables" },
+      { dr: "Discounts Allowed", cr: "Trade Receivables" },
+      { dr: "Rental Expenses", cr: "Cash" },
+      { dr: "Bank", cr: "Rental Expenses" },
+      { dr: "Bank", cr: "Commissions Income" },
+      { dr: "Drawings", cr: "Purchases" },
+      { dr: "Drawings", cr: "Stationery" }
+    ];
+
+    const SAMPLE_DATES = [
+      "Jan 05", "Jan 14", "Feb 03", "Feb 19", "Mar 08", "Mar 22",
+      "Apr 10", "May 15", "Jun 01", "Jul 18", "Aug 24", "Sep 12",
+      "Oct 07", "Nov 12", "Nov 28", "Dec 15"
+    ];
+
+    const SAMPLE_AMOUNTS = [
+      250, 400, 550, 750, 820, 950, 1200, 1450, 1800, 2100,
+      2500, 3200, 3750, 4500, 5000, 6400, 8500
+    ];
+
+    const LEADERBOARD_STORAGE_KEY = "bafs_t_account_leaderboard_v1";
+
+    // Audio Synthesizer (Web Audio API synth)
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playAudioTone(isCorrect) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (isCorrect) {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12); // E5
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(220, now); // A3
+          osc.frequency.exponentialRampToValueAtTime(164.81, now + 0.15); // E3
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      } catch (e) {
+        // Audio fallback
+      }
+    }
+
+    // Main Game State (10-Question Quiz Mode)
+    let pairs = [...DEFAULT_PAIRS];
+    let lastPairIndex = -1;
+    let quizTimerInterval = null;
+    let clearConfirmTimeout = null;
+    let pendingClearConfirm = false;
+    const QUIZ_DURATION_SECONDS = 90; // 1:30 minutes
+
+    const state = {
+      playerName: "Player",
+      latestRunId: null,
+      score: 0,
+      attempted: 0,
+      streak: 0,
+      bestStreak: 0,
+      quizLength: 10,
+      timeLeft: QUIZ_DURATION_SECONDS,
+      answeredCurrent: false,
+      currentRound: null
+    };
+
+    function escapeHTML(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function loadLeaderboard() {
+      try {
+        const raw = localStorage.getItem(LEADERBOARD_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return sortLeaderboard(parsed);
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLeaderboard(entries) {
+      try {
+        localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(entries));
+      } catch (e) {
+        // Ignore storage quota errors
+      }
+    }
+
+    /**
+     * Strictly sorts leaderboard entries by:
+     * 1. Highest score (most correct answers) descending
+     * 2. Lowest timeUsedSeconds (quickest time) ascending
+     * 3. Highest bestStreak descending
+     * 4. Earliest timestamp ascending
+     */
+    function sortLeaderboard(entries) {
+      return [...entries].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (a.timeUsedSeconds !== b.timeUsedSeconds) return a.timeUsedSeconds - b.timeUsedSeconds;
+        if ((b.bestStreak || 0) !== (a.bestStreak || 0)) return (b.bestStreak || 0) - (a.bestStreak || 0);
+        return (a.timestamp || 0) - (b.timestamp || 0);
+      });
+    }
+
+    function recordLeaderboardRun(timeUsedSeconds) {
+      const runId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      state.latestRunId = runId;
+
+      const newEntry = {
+        id: runId,
+        name: state.playerName || "Player",
+        score: state.score,
+        total: state.quizLength,
+        timeUsedSeconds,
+        bestStreak: state.bestStreak,
+        timestamp: Date.now()
+      };
+
+      const existing = loadLeaderboard();
+      existing.push(newEntry);
+      const sorted = sortLeaderboard(existing);
+      saveLeaderboard(sorted);
+      return sorted;
+    }
+
+    function renderLeaderboardHTML(entries, highlightRunId = null, emptyMessage = "No rankings recorded yet. Be the first to complete a quiz!") {
+      if (!entries || entries.length === 0) {
+        return `<div class="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center text-xs sm:text-sm text-slate-500">${escapeHTML(emptyMessage)}</div>`;
+      }
+
+      return entries.map((entry, idx) => {
+        const rank = idx + 1;
+        let rankDisplay = `#${rank}`;
+        let rankBadgeClass = "bg-slate-100 text-slate-600 border-slate-200";
+
+        if (rank === 1) {
+          rankDisplay = "🥇 #1";
+          rankBadgeClass = "bg-amber-100 text-amber-800 border-amber-300";
+        } else if (rank === 2) {
+          rankDisplay = "🥈 #2";
+          rankBadgeClass = "bg-slate-200/80 text-slate-800 border-slate-300";
+        } else if (rank === 3) {
+          rankDisplay = "🥉 #3";
+          rankBadgeClass = "bg-orange-100 text-orange-800 border-orange-300";
+        }
+
+        const isLatest = highlightRunId && entry.id === highlightRunId;
+        const rowClass = isLatest
+          ? "border-indigo-400 bg-indigo-50/70 shadow-2xs"
+          : "border-slate-200 bg-white";
+
+        const latestTag = isLatest
+          ? `<span class="ml-1.5 px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wide">Latest</span>`
+          : "";
+
+        return `
+          <div class="flex items-center justify-between gap-2.5 p-3 rounded-xl border ${rowClass}">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="inline-flex items-center justify-center px-2 py-1 rounded-lg border text-xs font-extrabold tabular-nums shrink-0 ${rankBadgeClass}">
+                ${rankDisplay}
+              </span>
+              <div class="min-w-0">
+                <div class="text-xs sm:text-sm font-bold text-slate-900 truncate flex items-center">
+                  <span class="truncate">${escapeHTML(entry.name || "Player")}</span>
+                  ${latestTag}
+                </div>
+                <div class="text-[11px] text-slate-400 tabular-nums">
+                  Best streak: ${entry.bestStreak || 0} 🔥
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4 shrink-0 text-right">
+              <div>
+                <div class="text-xs sm:text-sm font-extrabold text-emerald-700 tabular-nums">${entry.score} / ${entry.total || 10}</div>
+                <div class="text-[10px] font-semibold uppercase text-slate-400">Correct</div>
+              </div>
+              <div class="pl-2.5 border-l border-slate-200/80">
+                <div class="text-xs sm:text-sm font-extrabold text-indigo-600 font-mono-ledger tabular-nums">${formatTime(entry.timeUsedSeconds)}</div>
+                <div class="text-[10px] font-semibold uppercase text-slate-400">Time</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderStartScreenLeaderboard() {
+      const entries = loadLeaderboard();
+      const countEl = document.getElementById("startLeaderboardCount");
+      const listEl = document.getElementById("startLeaderboardList");
+      if (countEl) {
+        countEl.textContent = entries.length > 0 ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"}` : "";
+      }
+      if (listEl) {
+        listEl.innerHTML = renderLeaderboardHTML(
+          entries.slice(0, 5),
+          null,
+          "No rankings yet — enter your name above and set the first record!"
+        );
+      }
+    }
+
+    function handleClearRankingClick() {
+      const btn = document.getElementById("clearRankingBtn");
+      if (!btn) return;
+
+      if (!pendingClearConfirm) {
+        pendingClearConfirm = true;
+        btn.textContent = "Confirm Clear?";
+        btn.classList.remove("text-slate-400", "hover:text-rose-600", "hover:bg-rose-50");
+        btn.classList.add("bg-rose-600", "text-white", "hover:bg-rose-700");
+
+        clearConfirmTimeout = setTimeout(() => {
+          resetClearConfirmButton();
+        }, 3500);
+      } else {
+        clearTimeout(clearConfirmTimeout);
+        saveLeaderboard([]);
+        state.latestRunId = null;
+        resetClearConfirmButton();
+        const listEl = document.getElementById("leaderboardList");
+        if (listEl) {
+          listEl.innerHTML = renderLeaderboardHTML([], null, "Ranking cleared.");
+        }
+        renderStartScreenLeaderboard();
+      }
+    }
+
+    function resetClearConfirmButton() {
+      pendingClearConfirm = false;
+      const btn = document.getElementById("clearRankingBtn");
+      if (!btn) return;
+      btn.textContent = "Clear Ranking";
+      btn.classList.remove("bg-rose-600", "text-white", "hover:bg-rose-700");
+      btn.classList.add("text-slate-400", "hover:text-rose-600", "hover:bg-rose-50");
+    }
+
+    function updatePlayerNameDisplays() {
+      const badge = document.getElementById("activePlayerBadge");
+      const nameText = document.getElementById("activePlayerNameText");
+      const playAgainName = document.getElementById("playAgainPlayerName");
+      if (nameText) nameText.textContent = state.playerName;
+      if (playAgainName) playAgainName.textContent = state.playerName;
+      if (badge) {
+        badge.classList.remove("hidden");
+        badge.classList.add("inline-flex");
+      }
+    }
+
+    function handleStartSubmit(event) {
+      if (event) event.preventDefault();
+      const input = document.getElementById("playerNameInput");
+      const rawName = input ? input.value.trim() : "";
+      state.playerName = rawName.length > 0 ? rawName.slice(0, 24) : "Player";
+      updatePlayerNameDisplays();
+      restartQuiz();
+    }
+
+    function returnToStartScreen() {
+      stopQuizTimer();
+      resetClearConfirmButton();
+
+      document.getElementById("gameArena").classList.add("hidden");
+      document.getElementById("quizSummaryScreen").classList.add("hidden");
+      document.getElementById("scoreboardSection").classList.add("hidden");
+
+      const badge = document.getElementById("activePlayerBadge");
+      if (badge) {
+        badge.classList.add("hidden");
+        badge.classList.remove("inline-flex");
+      }
+
+      const startScreen = document.getElementById("startScreen");
+      startScreen.classList.remove("hidden");
+      renderStartScreenLeaderboard();
+
+      const input = document.getElementById("playerNameInput");
+      if (input) {
+        input.value = state.playerName === "Player" ? "" : state.playerName;
+        setTimeout(() => input.focus(), 50);
+      }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function updateTimerUI() {
+      const timerEl = document.getElementById("statTimer");
+      if (!timerEl) return;
+      timerEl.textContent = formatTime(state.timeLeft);
+      if (state.timeLeft <= 15) {
+        timerEl.classList.remove("text-slate-900");
+        timerEl.classList.add("text-rose-600");
+      } else {
+        timerEl.classList.remove("text-rose-600");
+        timerEl.classList.add("text-slate-900");
+      }
+    }
+
+    function startQuizTimer() {
+      stopQuizTimer();
+      state.timeLeft = QUIZ_DURATION_SECONDS;
+      updateTimerUI();
+
+      quizTimerInterval = setInterval(() => {
+        state.timeLeft -= 1;
+        if (state.timeLeft <= 0) {
+          state.timeLeft = 0;
+          updateTimerUI();
+          stopQuizTimer();
+          showQuizSummary(true);
+        } else {
+          updateTimerUI();
+        }
+      }, 1000);
+    }
+
+    function stopQuizTimer() {
+      if (quizTimerInterval) {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+      }
+    }
+
+    function pickRandomPair() {
+      if (pairs.length === 1) return pairs[0];
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * pairs.length);
+      } while (idx === lastPairIndex);
+      lastPairIndex = idx;
+      return pairs[idx];
+    }
+
+    function formatCurrency(amount) {
+      return "$" + amount.toLocaleString();
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const iconText = soundEnabled ? "🔊" : "🔇";
+      const labelText = soundEnabled ? "Audio On" : "Audio Off";
+      if (document.getElementById("soundIcon")) document.getElementById("soundIcon").textContent = iconText;
+      if (document.getElementById("soundLabel")) document.getElementById("soundLabel").textContent = labelText;
+    }
+
+    function populateTAccountEntry(cardPos, side, dateStr, amountStr, contraAccountName) {
+      const targetEntry = document.getElementById(
+        side === "debit" ? `${cardPos}CardDebitEntry` : `${cardPos}CardCreditEntry`
+      );
+      targetEntry.querySelector('[data-role="date"]').textContent = dateStr;
+      targetEntry.querySelector('[data-role="amount"]').textContent = amountStr;
+      
+      const contraEl = targetEntry.querySelector('[data-role="contra"]');
+      if (contraEl) {
+        contraEl.textContent = contraAccountName;
+      }
+
+      targetEntry.classList.remove("hidden");
+      targetEntry.classList.add("flex");
+    }
+
+    function generateRound() {
+      state.answeredCurrent = false;
+
+      const pair = pickRandomPair();
+      const dateStr = SAMPLE_DATES[Math.floor(Math.random() * SAMPLE_DATES.length)];
+      const amountVal = SAMPLE_AMOUNTS[Math.floor(Math.random() * SAMPLE_AMOUNTS.length)];
+      const amountStr = formatCurrency(amountVal);
+
+      const debitOnLeftCard = Math.random() < 0.5;
+
+      const leftCardAccount = debitOnLeftCard ? pair.dr : pair.cr;
+      const leftCardSide = debitOnLeftCard ? "debit" : "credit";
+      const leftCardContra = debitOnLeftCard ? pair.cr : pair.dr;
+
+      const rightCardAccount = debitOnLeftCard ? pair.cr : pair.dr;
+      const rightCardSide = debitOnLeftCard ? "credit" : "debit";
+      const rightCardContra = debitOnLeftCard ? pair.dr : pair.cr;
+
+      const correctOption = { dr: pair.dr, cr: pair.cr, isCorrect: true };
+      const wrongOption = { dr: pair.cr, cr: pair.dr, isCorrect: false };
+
+      const options = Math.random() < 0.5
+        ? [correctOption, wrongOption]
+        : [wrongOption, correctOption];
+
+      state.currentRound = {
+        pair,
+        dateStr,
+        amountStr,
+        debitOnLeftCard,
+        leftCardAccount,
+        leftCardSide,
+        leftCardContra,
+        rightCardAccount,
+        rightCardSide,
+        rightCardContra,
+        options
+      };
+
+      renderRoundUI();
+    }
+
+    function renderRoundUI() {
+      const r = state.currentRound;
+
+      document.getElementById("leftAccountName").textContent = r.leftCardAccount;
+      resetTAccountVisuals("left");
+      populateTAccountEntry("left", r.leftCardSide, r.dateStr, r.amountStr, r.leftCardContra);
+
+      document.getElementById("rightAccountName").textContent = r.rightCardAccount;
+      resetTAccountVisuals("right");
+      populateTAccountEntry("right", r.rightCardSide, r.dateStr, r.amountStr, r.rightCardContra);
+
+      r.options.forEach((opt, index) => {
+        const btn = document.getElementById(`optionBtn${index}`);
+        const keyBadge = document.getElementById(`optionKey${index}`);
+        const line1 = document.getElementById(`option${index}Line1`);
+        const line2 = document.getElementById(`option${index}Line2`);
+        const icon = document.getElementById(`optionIcon${index}`);
+
+        btn.disabled = false;
+        btn.className = "choice-btn group relative bg-white border-2 border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 text-left flex items-center justify-between gap-3 cursor-pointer focus:outline-none focus:ring-4 focus:ring-indigo-500/20 active:bg-slate-50";
+        keyBadge.className = "inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-600 font-mono text-xs font-bold group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0";
+        line1.textContent = `Dr. ${opt.dr}`;
+        line2.textContent = `Cr. ${opt.cr}`;
+        icon.textContent = "";
+      });
+
+      document.getElementById("feedbackBanner").classList.add("hidden");
+      updateScoreboardUI();
+    }
+
+    function resetTAccountVisuals(cardPos) {
+      const badge = document.getElementById(`${cardPos}CardBadge`);
+      const debitCol = document.getElementById(`${cardPos}CardDebitCol`);
+      const creditCol = document.getElementById(`${cardPos}CardCreditCol`);
+      const debitEntry = document.getElementById(`${cardPos}CardDebitEntry`);
+      const creditEntry = document.getElementById(`${cardPos}CardCreditEntry`);
+
+      badge.classList.add("hidden");
+      badge.textContent = "";
+      debitCol.classList.remove("highlight-debit");
+      creditCol.classList.remove("highlight-credit");
+
+      debitEntry.classList.add("hidden");
+      debitEntry.classList.remove("flex");
+      creditEntry.classList.add("hidden");
+      creditEntry.classList.remove("flex");
+    }
+
+    function submitAnswer(selectedIndex) {
+      if (state.answeredCurrent) return;
+      state.answeredCurrent = true;
+
+      const r = state.currentRound;
+      const chosenOption = r.options[selectedIndex];
+      const isCorrect = chosenOption.isCorrect;
+
+      playAudioTone(isCorrect);
+
+      state.attempted += 1;
+      if (isCorrect) {
+        state.score += 1;
+        state.streak += 1;
+        if (state.streak > state.bestStreak) {
+          state.bestStreak = state.streak;
+        }
+      } else {
+        state.streak = 0;
+      }
+
+      r.options.forEach((opt, idx) => {
+        const btn = document.getElementById(`optionBtn${idx}`);
+        const keyBadge = document.getElementById(`optionKey${idx}`);
+        const icon = document.getElementById(`optionIcon${idx}`);
+        btn.disabled = true;
+
+        if (opt.isCorrect) {
+          btn.className = "choice-btn relative bg-emerald-50/90 border-2 border-emerald-500 rounded-2xl p-5 text-left flex items-center justify-between gap-4 shadow-xs";
+          keyBadge.className = "mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-600 text-white font-mono text-xs font-bold";
+          icon.textContent = "✓";
+          icon.className = "text-xl font-extrabold text-emerald-600";
+        } else if (idx === selectedIndex && !opt.isCorrect) {
+          btn.className = "choice-btn relative bg-rose-50/90 border-2 border-rose-500 rounded-2xl p-5 text-left flex items-center justify-between gap-4";
+          keyBadge.className = "mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-lg bg-rose-600 text-white font-mono text-xs font-bold";
+          icon.textContent = "✕";
+          icon.className = "text-xl font-extrabold text-rose-600";
+        } else {
+          btn.className = "choice-btn relative bg-slate-50 border-2 border-slate-200/70 rounded-2xl p-5 text-left flex items-center justify-between gap-4 opacity-55";
+        }
+      });
+
+      revealTAccountSides("left", r.leftCardSide);
+      revealTAccountSides("right", r.rightCardSide);
+
+      const banner = document.getElementById("feedbackBanner");
+      const badgeIcon = document.getElementById("feedbackBadgeIcon");
+      const title = document.getElementById("feedbackTitle");
+      const nextBtnLabel = document.getElementById("nextBtnLabel");
+
+      banner.classList.remove("hidden");
+
+      if (isCorrect) {
+        banner.className = "animate-pop-in rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4";
+        badgeIcon.className = "w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 font-bold text-lg";
+        badgeIcon.textContent = "✓";
+        title.className = "text-base font-extrabold text-emerald-950";
+        title.textContent = "Correct!";
+      } else {
+        banner.className = "animate-pop-in rounded-2xl border border-rose-200 bg-rose-50/80 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4";
+        badgeIcon.className = "w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 font-bold text-lg";
+        badgeIcon.textContent = "!";
+        title.className = "text-base font-extrabold text-rose-950";
+        title.textContent = "Incorrect";
+      }
+
+      if (state.attempted >= state.quizLength) {
+        nextBtnLabel.textContent = "View Quiz Results";
+      } else {
+        nextBtnLabel.textContent = "Next Question";
+      }
+
+      updateScoreboardUI(isCorrect);
+    }
+
+    function revealTAccountSides(cardPos, side) {
+      const badge = document.getElementById(`${cardPos}CardBadge`);
+      badge.classList.remove("hidden");
+
+      if (side === "debit") {
+        document.getElementById(`${cardPos}CardDebitCol`).classList.add("highlight-debit");
+        badge.className = "text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+        badge.textContent = "Left Side = Debited (Dr.)";
+      } else {
+        document.getElementById(`${cardPos}CardCreditCol`).classList.add("highlight-credit");
+        badge.className = "text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200";
+        badge.textContent = "Right Side = Credited (Cr.)";
+      }
+    }
+
+    function nextRound() {
+      if (state.attempted >= state.quizLength) {
+        stopQuizTimer();
+        showQuizSummary(false);
+        return;
+      }
+      generateRound();
+    }
+
+    function updateScoreboardUI(justScored = false) {
+      document.getElementById("statScore").textContent = state.score;
+      document.getElementById("statTotal").textContent = `/ ${state.attempted}`;
+
+      const accuracyEl = document.getElementById("statAccuracy");
+      if (state.attempted === 0) {
+        accuracyEl.textContent = "—";
+      } else {
+        const pct = Math.round((state.score / state.attempted) * 100);
+        accuracyEl.textContent = `${pct}%`;
+      }
+
+      const streakEl = document.getElementById("statStreak");
+      const flameEl = document.getElementById("streakFlame");
+      streakEl.textContent = state.streak;
+      flameEl.style.opacity = state.streak > 0 ? "1" : "0.25";
+
+      if (justScored && state.streak > 1) {
+        streakEl.classList.remove("streak-bump");
+        void streakEl.offsetWidth;
+        streakEl.classList.add("streak-bump");
+      }
+
+      const progressLabel = document.getElementById("progressLabel");
+      const progressValue = document.getElementById("progressValue");
+      const barWrap = document.getElementById("quizProgressBarWrap");
+      const bar = document.getElementById("quizProgressBar");
+
+      const currentQ = Math.min(state.attempted + (state.answeredCurrent ? 0 : 1), state.quizLength);
+      progressLabel.textContent = "Quiz Progress";
+      progressValue.textContent = `Question ${currentQ} of ${state.quizLength}`;
+      barWrap.classList.remove("hidden");
+      bar.style.width = `${(state.attempted / state.quizLength) * 100}%`;
+    }
+
+    function restartQuiz() {
+      state.score = 0;
+      state.attempted = 0;
+      state.streak = 0;
+      state.bestStreak = 0;
+      resetClearConfirmButton();
+
+      document.getElementById("startScreen").classList.add("hidden");
+      document.getElementById("quizSummaryScreen").classList.add("hidden");
+      document.getElementById("scoreboardSection").classList.remove("hidden");
+      document.getElementById("gameArena").classList.remove("hidden");
+      document.getElementById("optionsWrapper").classList.remove("hidden");
+      updatePlayerNameDisplays();
+
+      startQuizTimer();
+      generateRound();
+    }
+
+    function showQuizSummary(timedOut = false) {
+      stopQuizTimer();
+      document.getElementById("gameArena").classList.add("hidden");
+      document.getElementById("optionsWrapper").classList.add("hidden");
+      const summaryScreen = document.getElementById("quizSummaryScreen");
+      summaryScreen.classList.remove("hidden");
+
+      const summaryIcon = document.getElementById("summaryIcon");
+      const summaryTitle = document.getElementById("summaryTitle");
+      const summarySubtitle = document.getElementById("summarySubtitle");
+
+      if (timedOut) {
+        summaryIcon.textContent = "⏱️";
+        summaryTitle.textContent = `Time's Up, ${state.playerName}!`;
+        summarySubtitle.textContent = "The 01:30 timer has expired. Here is your final score and ranking.";
+      } else {
+        summaryIcon.textContent = "🏆";
+        summaryTitle.textContent = `Well Done, ${state.playerName}!`;
+        summarySubtitle.textContent = "Here is how well you identified Debit (left) and Credit (right) T-account entries.";
+      }
+
+      const pct = Math.round((state.score / state.quizLength) * 100);
+      const timeUsedSeconds = Math.max(0, QUIZ_DURATION_SECONDS - state.timeLeft);
+      document.getElementById("summaryScore").textContent = `${state.score} / ${state.quizLength}`;
+      document.getElementById("summaryAccuracy").textContent = `${pct}%`;
+      document.getElementById("summaryTimeUsed").textContent = formatTime(timeUsedSeconds);
+      document.getElementById("summaryBestStreak").textContent = state.bestStreak;
+
+      const sortedLeaderboard = recordLeaderboardRun(timeUsedSeconds);
+      const leaderboardList = document.getElementById("leaderboardList");
+      if (leaderboardList) {
+        leaderboardList.innerHTML = renderLeaderboardHTML(sortedLeaderboard, state.latestRunId);
+      }
+    }
+
+    function toggleHints(enabled) {
+      document.querySelectorAll(".dr-cr-hint").forEach(el => {
+        if (enabled) {
+          el.classList.remove("hidden");
+        } else {
+          el.classList.add("hidden");
+        }
+      });
+    }
+
+    document.addEventListener("keydown", (e) => {
+      // Do not trigger game shortcuts while on Start Screen or Summary Screen
+      if (!document.getElementById("startScreen").classList.contains("hidden")) {
+        return;
+      }
+      if (!document.getElementById("quizSummaryScreen").classList.contains("hidden")) {
+        return;
+      }
+
+      if (!state.answeredCurrent) {
+        if (e.key === "1") {
+          e.preventDefault();
+          submitAnswer(0);
+        } else if (e.key === "2") {
+          e.preventDefault();
+          submitAnswer(1);
+        }
+      } else {
+        if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight") {
+          e.preventDefault();
+          nextRound();
+        }
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderStartScreenLeaderboard();
+      const input = document.getElementById("playerNameInput");
+      if (input) {
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
